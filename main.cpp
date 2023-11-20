@@ -72,7 +72,7 @@ enum FUNCT {
 };
 
 
-int32_t mem[0x000204c];
+int32_t mem[10000];
 int32_t reg[32];
 uint32_t pc = 0x00000000;
 uint32_t ri = 0x00000000;
@@ -160,29 +160,52 @@ void execute(){
             break;
         }
 
-        case LB:
+        case LB:{
+
             cout << "Executando LB" << endl;
+            int8_t *bytePtr = (int8_t*) mem;
 
-            reg[rt] = mem[rs + imm];
+            int address = ((reg[rs] + imm) - 0x2000)/4;
+
+            if (bytePtr[address] < 0) {
+                int mask = (-1) ^ (255);   
+                reg[rt] = mask | mem[8192 + address] ;
+            }
+            else{
+                reg[rt] = mem[8192 + address] & 255; // garante que os bits vao ser 0 depois do 8
+            }
 
             break;
 
-        case LBU:
+        }
+
+        case LBU:{
+
             cout << "Executando LBU" << endl;
-            // Handle LBU opcode
+            int address = ((reg[rs] + imm) - 0x2000)/4;
+            reg[rt] = mem[8192 + address] & 255;
             break;
+        }
+        
         case LH:
             cout << "Executando LH" << endl;
-            // Handle LH opcode
+             
+            
+
             break;
+
         case LHU:
             cout << "Executando LHU" << endl;
             // Handle LHU opcode
             break;
+
+
         case LUI:
             cout << "Executando LUI" << endl;
             reg[rt] = imm << 16;
             break;
+
+
         case SW:
             cout << "Executando SW" << endl;
             // Handle SW opcode
@@ -194,14 +217,39 @@ void execute(){
         case SH:
             cout << "Executando SH" << endl;
             // Handle SH opcode
+
+            
+
+
             break;
         case BEQ:
             cout << "Executando BEQ" << endl;
             // Handle BEQ opcode
+
+            if(reg[rs] == reg[rt]){
+                pc = pc + imm;
+            }
+            else{
+                pc++;
+            }
+
+            ri = mem[pc];
+
+
             break;
         case BNE:
             cout << "Executando BNE" << endl;
             // Handle BNE opcode
+
+            if(reg[rs] != reg[rt]){
+                pc = pc + imm;
+            }
+            else{
+                pc++;
+            }
+
+            ri = mem[pc];
+
             break;
         case BLEZ:
             cout << "Executando BLEZ" << endl;
@@ -220,14 +268,26 @@ void execute(){
         case SLTI:
             cout << "Executando SLTI" << endl;
             // Handle SLTI opcode
+            
+            if(reg[rs] < imm){
+                reg[rt] = 1;
+            }
+            else{
+                reg[rt] = 0;
+            }
             break;
         case SLTIU:
             cout << "Executando SLTIU" << endl;
             // Handle SLTIU opcode
+
+
             break;
         case ANDI:
             cout << "Executando ANDI" << endl;
             // Handle ANDI opcode
+
+            reg[rt] = reg[rs] & imm;
+
             break;
 
         case ORI:
@@ -237,19 +297,32 @@ void execute(){
 
         case XORI:
             cout << "Executando XORI" << endl;
-            // Handle XORI opcode
+
+            reg[rt] = reg[rs] ^ imm;
+
             break;
         case J:
             cout << "Executando J" << endl;
             // Handle J opcode
+
+            pc = 0x00000000;
+            pc += imm;
+            ri = mem[pc];
+            break;
+
             break;
         case JAL:
             cout << "Executando JAL" << endl;
             // Handle JAL opcode
+
+            reg[31] = pc + 1;
+
             break;
         default:
             cout << "Executando opcode desconhecido" << endl;
             // Handle unknown opcode
+
+            
             break;
     }
 }
@@ -302,8 +375,10 @@ int main() {
 
     fetch(false);
     decode();
-    dump_reg('h', true);
     execute();
+    dump_reg('h', true);
+
+
 
     // fetch(false);
     // decode();
