@@ -71,7 +71,7 @@ enum FUNCT {
     MFLO = 0x12
 };
 
-
+bool last_jr = false; 
 int32_t mem[4096];
 int32_t reg[32];
 uint32_t pc = 0x00000000;
@@ -83,8 +83,11 @@ uint32_t rd = 0x00000000;
 uint32_t shamt = 0x00000000;
 uint32_t funct = 0x00000000;
 uint32_t imm = 0x00000000;
+uint32_t hi = 0x00000000;
+uint32_t lo = 0x00000000;
 
 void dump_mem(int start, int end, char format) {
+    cout << "--------  data:   --------" << endl;
     int indice = start;
     for (int i = start; i < start + end; i++) {
         cout << "Address 0x" << hex << indice << ": ";
@@ -95,6 +98,7 @@ void dump_mem(int start, int end, char format) {
         }
         indice += 4;
     }
+    cout << "--------    --------" << endl;
 }
 
 void dump_reg(char format, bool showRegs) {
@@ -122,18 +126,28 @@ void dump_reg(char format, bool showRegs) {
             }
         }
     }
+    cout << "hi:           " << hi << endl;
+    cout << "lo:           " << lo << endl;
+    cout << "ri:           " << ri << endl;
 
     cout << "-------------- Fim  --------------" << endl;
 }
 
 void fetch(bool first) {
-    if(first) {
-        pc = 0x00000000;
+    if(last_jr){
+        last_jr = false;
+        ri = mem[pc];
+        return;
+    }else{
+
+        if(first) {
+            pc = 0x00000000;
+        }
+        else {
+            pc += 1;
+        }
+        ri = mem[pc];
     }
-    else {
-        pc += 1;
-    }
-    ri = mem[pc];
 }
 
 void decode() {
@@ -148,10 +162,150 @@ void decode() {
 
 
 void execute(){
+    cout << "PC " << pc << " ";
     switch (opcode) {
+
+
+        
         case EXT:
-            // Handle EXT opcode
-            break;
+            cout << "Executando EXT" << endl;
+
+            switch(funct){
+                case ADD:{
+                    cout << "Executando ADD" << endl;
+                    reg[rd] = reg[rs] + reg[rt];
+                    break;
+                }
+                case SUB:{
+                    cout << "Executando SUB" << endl;
+                    reg[rd] = reg[rs] - reg[rt];
+                    break;
+                }
+                case MULT:{
+                    cout << "Executando MULT" << endl;
+                    uint64_t temp = ((unsigned int) reg[rs]) * ((unsigned int) reg[rt]);
+                    cout << reg[rs] << endl;
+                    cout << reg[rt] << endl;
+                    cout << temp << endl; 
+                    hi = (temp >> 32);
+                    lo = temp & 0xFFFFFFFF;
+                    break;
+                }
+                case DIV:{
+
+                    cout << "Executando DIV" << endl;
+
+                    lo = reg[rs] / reg[rt];
+                    hi = reg[rs] % reg[rt];
+                    
+                    break;
+                
+                
+                }
+                case AND:{
+                    cout << "Executando AND" << endl;
+                    reg[rd] = reg[rs] & reg[rt];
+                    break;
+                }
+                case OR:{
+                    cout << "Executando OR" << endl;
+                    reg[rd] = reg[rs] | reg[rt];
+                    break;
+                }
+                case XOR:{
+                    cout << "Executando XOR" << endl;
+                    reg[rd] = reg[rs] ^ reg[rt];
+                    break;
+                }
+                case NOR:{
+                    cout << "Executando NOR" << endl;
+                    reg[rd] = ~(reg[rs] | reg[rt]);
+                    break;
+                }
+                case SLT:{
+                    cout << "Executando SLT" << endl;
+                    if(reg[rs] < reg[rt]){
+                        reg[rd] = 1;
+                    }
+                    else{
+                        reg[rd] = 0;
+                    }
+                    break;
+                }
+                case SLL:{
+                    cout << "Executando SLL" << endl;
+                    reg[rd] = reg[rt] << shamt;
+                    break;
+                }
+                case SRL:{
+                    cout << "Executando SRL" << endl;
+                    reg[rd] = reg[rt] >> shamt;
+                    break;
+                }
+                case SRA:{
+                    cout << "Executando SRA" << endl;
+                    reg[rd] = reg[rt] >> shamt;
+                    break;
+                }
+
+                case MFHI:{
+                    cout << "Executando MFHI" << endl;
+                    reg[rd] = hi;
+                    break;
+                }
+                case MFLO:{
+                    cout << "Executando MFLO" << endl;
+                    reg[rd] = lo;
+                    break;
+                    
+                }
+
+                case JR:{
+                    cout << "Executando JR" << endl;
+
+                    cout <<hex<< pc << endl;
+                    
+                    pc = reg[rs]/4;
+
+                    cout << hex << pc << endl;
+                    ri = pc;
+
+                    last_jr = true;
+                    break;
+                }
+
+                case SYSCALL:{
+                    cout << "Executando SYSCALL" << endl;
+
+                    // ✴imprimir inteiro
+                    if(reg[2] == 1){
+                        cout << reg[4] << endl;
+                    }
+
+                    // ✴imprimir string
+                    if(reg[2] == 4){
+                        int i = reg[4];
+                        while(mem[i] != 0){
+                            cout << (char) mem[i];
+                            i++;
+                        }
+                        cout << endl;
+                    }
+                    
+                    // ✴encerrar programa
+                    if(reg[2] == 10){
+                        exit(0);    
+                    }
+
+                    break;
+                }
+            
+            }
+
+
+
+       
+        break;
         case LW:{
             cout << "Executando LW" << endl;
 
@@ -240,27 +394,36 @@ void execute(){
         }
 
 
-        case SB:
+        case SB:{
+
             cout << "Executando SB" << endl;
-            // Handle SB opcode
+
+            uint8_t *byteP = (uint8_t*) mem;
+
+            byteP[(rs + imm)] = reg[rt];
+        
             break;
-        case SH:
+        }
+        
+        case SH:{
+
             cout << "Executando SH" << endl;
             // Handle SH opcode
 
+            uint16_t *halfP = (uint16_t*) mem;
+
+            halfP[(rs + imm)/2] = reg[rt];
+
             
-
-
             break;
+        }
+        
         case BEQ:
             cout << "Executando BEQ" << endl;
             // Handle BEQ opcode
 
             if(reg[rs] == reg[rt]){
                 pc = pc + imm;
-            }
-            else{
-                pc++;
             }
 
             ri = mem[pc];
@@ -273,9 +436,6 @@ void execute(){
 
             if(reg[rs] != reg[rt]){
                 pc = pc + imm;
-            }
-            else{
-                pc++;
             }
 
             ri = mem[pc];
@@ -295,7 +455,7 @@ void execute(){
             reg[rt] = reg[rs] + imm;
 
             break;
-        case SLTI:
+        case SLTI:{
             cout << "Executando SLTI" << endl;
             // Handle SLTI opcode
             
@@ -306,12 +466,24 @@ void execute(){
                 reg[rt] = 0;
             }
             break;
-        case SLTIU:
+        }
+        case SLTIU:{
+
             cout << "Executando SLTIU" << endl;
             // Handle SLTIU opcode
+            unsigned int temp = imm;
+
+            if(reg[rs] < temp){
+                reg[rt] = 1;
+            }
+            else{
+                reg[rt] = 0;
+            }
+            break;
 
 
             break;
+        }
         case ANDI:
             cout << "Executando ANDI" << endl;
             // Handle ANDI opcode
@@ -348,6 +520,7 @@ void execute(){
             reg[31] = pc + 1;
 
             break;
+        
         default:
             cout << "Executando opcode desconhecido" << endl;
             // Handle unknown opcode
@@ -357,6 +530,12 @@ void execute(){
     }
 }
 
+
+void step() {
+    fetch(false);
+    decode();
+    execute();
+}
 
 int main() {    
 
@@ -387,13 +566,13 @@ int main() {
     }
 
 
+
     fetch(true);
     decode();
     execute();
     dump_reg('h', true);
 
-
-    for(int i = 0; i < 6; i++){
+    for(int i = 0; i < 35; i++){
 
     fetch(false);
     decode();
@@ -404,23 +583,6 @@ int main() {
     }
 
     
-    
-    // fetch(false);
-    // decode();
-    // execute();
-    // dump_reg('h', true);
-
-    // fetch(false);
-    // decode();
-    // execute();
-    // dump_reg('h', true);
-
-
-
-    // fetch(false);
-    // decode();
-    // dump_reg('h', true);
-    // execute();
 
     return 0;
 }

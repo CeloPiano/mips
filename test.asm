@@ -3,6 +3,8 @@
 .data
     array:  .word 1232222, 23, 322, 44, 55
     result: .word 0
+    result2: .word 1
+    j: .word 0x70
 
 .text
     main:
@@ -28,10 +30,10 @@
         sw $t0, result($zero)
 
         # Store a byte from a register into memory
-        sb $t1, result($zero)
+        sb $t5, 0x2000($zero)
 
         # Store a halfword from a register into memory
-        sh $t3, result($zero)
+        sh $t3, 0x2004($zero)
 
         # Add an immediate value to a register
         addi $t0, $t0, 10
@@ -50,13 +52,64 @@
 
         # Bitwise XOR with an immediate value
         xori $t5, $t0, 0xFF
+        
+        # ADD operation
+    	add $s0, $t0, $t1
+    	
+    	# SUB operation
+	sub $s1, $t2, $t3
+
+    	# MULT operation
+    	mult $t4, $t5
+    	
+    	 # DIV operation
+    	div $s3, $s0, $s1
+
+   	 # AND operation
+    	and $s4, $s2, $s3
+
+    	# OR operation
+    	or $s5, $s4, $s0
+
+    	# XOR operation
+    	xor $s6, $s5, $s1
+
+   	 # NOR operation
+    	nor $s7, $s6, $s2
+
+    	# SLT operation
+    	slt $s2, $s7, $s3
+    	
+    	# SLL operation
+   	 sll $t6, $t0, 2
+
+    	# SRL operation
+    	srl $t7, $t1, 3
+
+    	# SRA operation
+    	sra $t8, $t2, 4
+    	
+    	# MFHI operation
+    	mfhi $t9
+
+    	# MFLO operation
+    	mflo $s2
+        
+        addi $s3, $zero, 0x88
+        
+	# JR operation
+    	jr $s3
 	
 	# Branch if two registers are equal
         beq $t0, $t1, equal_label
-
-equal_label_back:
+        
         # Branch if two registers are not equal
-        bne $t0, $t1, not_equal_label
+        bne $t0, $t1, equal_label
+        
+        equal_label:
+        # Code for equal case
+        li $v0, 10
+	syscall
 
 not_equal_label_back:
         # Branch if less than or equal to zero
@@ -69,14 +122,10 @@ less_equal_zero_label_back:
 greater_zero_label_back:	
         # Jump to a target address
         jal jump_label
+        
 jump_label_back:
 	li $v0, 10
 	syscall
-
-    equal_label:
-        # Code for equal case
-        ...
-        jal equal_label_back
 
     not_equal_label:
         # Code for not equal case
