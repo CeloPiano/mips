@@ -72,7 +72,7 @@ enum FUNCT {
 };
 
 
-int32_t mem[10000];
+int32_t mem[4096];
 int32_t reg[32];
 uint32_t pc = 0x00000000;
 uint32_t ri = 0x00000000;
@@ -153,26 +153,28 @@ void execute(){
             // Handle EXT opcode
             break;
         case LW:{
-
             cout << "Executando LW" << endl;
-            int address = ((reg[rs] + imm) - 0x2000)/4;
-            reg[rt] = mem[8192 + address];
+
+            
+            int address = ((reg[rs] + imm))/4; // aqui dividimos por 4 pois o endereço é em bytes e o vetor é em int32_t 
+            reg[rt] = mem[address];
             break;
         }
 
         case LB:{
-
             cout << "Executando LB" << endl;
-            int8_t *bytePtr = (int8_t*) mem;
 
-            int address = ((reg[rs] + imm) - 0x2000)/4;
+            int8_t *byteP = (int8_t*) mem;
 
-            if (bytePtr[address] < 0) {
+
+            int address = ((reg[rs] + imm));
+
+            if (byteP[address] < 0) {
                 int mask = (-1) ^ (255);   
-                reg[rt] = mask | mem[8192 + address] ;
+                reg[rt] = mask | byteP[address] ;
             }
             else{
-                reg[rt] = mem[8192 + address] & 255; // garante que os bits vao ser 0 depois do 8
+                reg[rt] = byteP[address]; // garante que os bits vao ser 0 depois do 8
             }
 
             break;
@@ -180,36 +182,64 @@ void execute(){
         }
 
         case LBU:{
-
             cout << "Executando LBU" << endl;
-            int address = ((reg[rs] + imm) - 0x2000)/4;
-            reg[rt] = mem[8192 + address] & 255;
+
+            int address = ((reg[rs] + imm))/4;
+
+            reg[rt] = mem[address];
+
             break;
         }
         
-        case LH:
+        case LH:{
+
             cout << "Executando LH" << endl;
-             
+            int16_t *halfP = (int16_t*) mem;
             
+            int address = ((reg[rs] + imm))/2;
+
+            if (halfP[address] < 0) {
+                int mask = ~(65535);                    
+                reg[rt] = mask | halfP[address];
+            } else 
+                reg[rt] = halfP[address];   
+
 
             break;
+        }
 
-        case LHU:
+        case LHU:{
+            int16_t *halfP = (int16_t*) mem;
+
             cout << "Executando LHU" << endl;
-            // Handle LHU opcode
+            cout << mem[(reg[rs] + imm)/2] << endl;
+            cout << halfP[(reg[rs] + imm)/2] << endl;
+
+            reg[rt] = halfP[(reg[rs] + imm)/2] & 65535;               
+
             break;
+        }
 
 
         case LUI:
             cout << "Executando LUI" << endl;
+
             reg[rt] = imm << 16;
+            
             break;
 
 
-        case SW:
+        case SW:{
             cout << "Executando SW" << endl;
-            // Handle SW opcode
+
+            int adress = (reg[rs] + imm)/4;
+            cout << adress << endl;
+            mem[adress] = reg[rt];        
+            
             break;
+        }
+
+
         case SB:
             cout << "Executando SB" << endl;
             // Handle SB opcode
@@ -330,7 +360,7 @@ void execute(){
 
 int main() {    
 
-
+    cout << 0x2000/4 << endl;
     // TODO: alocação de memória 
 
     // Lendo o text.bin e alocando em from 0x00000000 to 0x00000044
@@ -339,17 +369,17 @@ int main() {
         textFile.seekg(0, ios::end);
         int fileSize = textFile.tellg();
         textFile.seekg(0, ios::beg);
-        textFile.read(reinterpret_cast<char*>(&mem[0]), fileSize);
+        textFile.read(reinterpret_cast<char*>(&mem[0]), 0x2000/4);
         textFile.close();
     } else {
         cout << "Erro abrindo o text bin" << endl;
         return 1;
     }
 
-    // Read data.bin e alocando em memory from 0x0000200 to 0x0000204c
+    // Read data.bin e alocando em memory from 0x0002000 to 4096
     ifstream dataFile("data.bin", ios::binary);
     if (dataFile) {
-        dataFile.read(reinterpret_cast<char*>(&mem[0x2000]), 0x4d);
+        dataFile.read(reinterpret_cast<char*>(&mem[(0x2000/4)]), 4096);
         dataFile.close();
     } else {
         cout << "Erro abrindo o data bin" << endl;
@@ -362,21 +392,28 @@ int main() {
     execute();
     dump_reg('h', true);
 
-    fetch(false);
-    decode();
-    execute();
-    dump_reg('h', true);
-    
-    
-    fetch(false);
-    decode();
-    execute();
-    dump_reg('h', true);
+
+    for(int i = 0; i < 6; i++){
 
     fetch(false);
     decode();
     execute();
     dump_reg('h', true);
+    dump_mem(0x2000/4, 6, 'h');
+    
+    }
+
+    
+    
+    // fetch(false);
+    // decode();
+    // execute();
+    // dump_reg('h', true);
+
+    // fetch(false);
+    // decode();
+    // execute();
+    // dump_reg('h', true);
 
 
 
