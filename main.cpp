@@ -88,7 +88,7 @@ uint32_t lo = 0x00000000;
 
 void dump_mem(int start, int end, char format) {
     cout << "--------  data:   --------" << endl;
-    int indice = start;
+    int indice = start/4;
     for (int i = start; i < start + end; i++) {
         cout << "Address 0x" << hex << indice << ": ";
         if (format == 'h') {
@@ -578,7 +578,7 @@ int main() {
     decode();
     execute();
     dump_reg('h', true);
-    dump_mem(0x2000/4, 6, 'h');
+    dump_mem(0x2000/4, 9, 'h');
     
     }
 
